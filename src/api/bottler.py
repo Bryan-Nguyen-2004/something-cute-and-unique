@@ -20,6 +20,14 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory]):
     """ """
     print(potions_delivered)
 
+    with db.engine.begin() as connection:
+        for potions in potions_delivered:
+            # update amount of ml
+            connection.execute(sqlalchemy.text("UPDATE global_inventory SET num_red_ml = num_red_ml - " + str(potions.quantity * 100)))
+
+            # update amount of potions
+            connection.execute(sqlalchemy.text("UPDATE global_inventory SET num_red_potions = num_red_potions + " + str(potions.quantity)))
+
     return "OK"
 
 # Gets called 4 times a day
@@ -36,18 +44,11 @@ def get_bottle_plan():
     # Initial logic: bottle all barrels into red potions.
 
     with db.engine.begin() as connection:
-
         # Always mix all available red ml if any exists
         result = connection.execute(sqlalchemy.text("SELECT num_red_ml FROM global_inventory"))
 
         # calculate amount of potions to create
         amount = result[0] // 100
-
-        # update amount of potions
-        connection.execute(sqlalchemy.text("UPDATE global_inventory SET num_red_ml = num_red_ml - " + (str(amount) * 100)))
-
-        # update amount of ml
-        connection.execute(sqlalchemy.text("UPDATE global_inventory SET num_red_potions = num_red_potions + " + str(amount)))
 
     return [
             {
