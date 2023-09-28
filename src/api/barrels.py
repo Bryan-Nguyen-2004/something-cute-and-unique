@@ -54,7 +54,7 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
                 barrel = b
 
         # if more then 10 potions or not enough gold then buy nothing
-        if first_row.num_red_potions >= 10 or first_row.gold < barrel.price:
+        if first_row.num_red_potions >= 10 or first_row.gold < barrel.price or barrel == None:
             return []
     
     return [
