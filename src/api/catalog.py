@@ -16,10 +16,7 @@ def get_catalog():
     with db.engine.begin() as connection:
 
         # Offer up for sale in the catalog only the amount of red potions that actually exist currently in inventory.
-        result = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory"))
-
-        for row in result:
-            print(row)
+        result = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory")).fetchone()
 
     return [
             {
