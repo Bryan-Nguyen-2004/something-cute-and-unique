@@ -18,12 +18,14 @@ def get_catalog():
         # Offer up for sale in the catalog only the amount of red potions that actually exist currently in inventory.
         result = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory"))
         first_row = result.first()
+        
+        amount = (first_row.num_red_potions > 0 ? 1 : 0)
 
     return [
             {
                 "sku": "RED_POTION_0",
                 "name": "red potion",
-                "quantity": first_row.num_red_potions,
+                "quantity": amount,
                 "price": 50,
                 "potion_type": [100, 0, 0, 0],
             }

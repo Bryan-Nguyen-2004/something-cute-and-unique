@@ -46,9 +46,10 @@ def get_bottle_plan():
     with db.engine.begin() as connection:
         # Always mix all available red ml if any exists
         result = connection.execute(sqlalchemy.text("SELECT num_red_ml FROM global_inventory"))
+        first_row = result.first()
 
         # calculate amount of potions to create
-        amount = result[0] // 100
+        amount = first_row.num_red_ml // 100
 
     return [
             {

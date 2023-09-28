@@ -44,7 +44,8 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     with db.engine.begin() as connection:
 
         # purchase a new small red potion barrel only if the number of potions in inventory is less than 10 or enough gold
-        result_ml = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory"))
+        result = connection.execute(sqlalchemy.text("SELECT num_red_potions,gold FROM global_inventory"))
+        first_row = result.first()
 
         # find small red barrel in catalog
         barrel = None
@@ -52,10 +53,8 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
             if b.sku == "SMALL_RED_BARREL":
                 barrel = b
 
-        result_gold = connection.execute(sqlalchemy.text("SELECT gold FROM global_inventory"))
-
         # if more then 10 potions or not enough gold then buy nothing
-        if result_ml[0] >= 10 or result_gold < barrel.price:
+        if first_row.num_red_potions >= 10 or first_row.gold < barrel.price:
             return []
     
     return [
