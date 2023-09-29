@@ -19,13 +19,14 @@ def get_catalog():
         result = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory"))
         first_row = result.first()
 
-        amount = (1 if first_row.num_red_potions else 0)
+        if not first_row.num_red_potions:
+            return []
 
     return [
             {
                 "sku": "RED_POTION_0",
                 "name": "red potion",
-                "quantity": amount,
+                "quantity": 1,
                 "price": 50,
                 "potion_type": [100, 0, 0, 0],
             }
