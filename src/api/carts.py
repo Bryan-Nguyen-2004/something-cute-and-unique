@@ -21,9 +21,11 @@ id_count = 0
 @router.post("/")
 def create_cart(new_cart: NewCart):
     """ """
-
+    global carts
+    global id_count
+    
     id_count += 1
-    print(id_count)
+    carts[id_count] = {}
 
     return {"cart_id": id_count}
 
@@ -42,7 +44,7 @@ class CartItem(BaseModel):
 @router.post("/{cart_id}/items/{item_sku}")
 def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
     """ """
-
+    global carts
     carts[cart_id][item_sku] = cart_item.quantity
 
     return "OK"
