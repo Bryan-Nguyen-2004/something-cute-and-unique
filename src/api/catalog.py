@@ -22,6 +22,7 @@ def get_catalog():
         if not first_row.num_red_potions:
             return []
 
+    # hard-coded to only ever offer one red potion
     return [
             {
                 "sku": "RED_POTION_0",
