@@ -14,7 +14,7 @@ router = APIRouter(
 class NewCart(BaseModel):
     customer: str
 
-# stored as a list of lists
+# stored as a dictionary of dictionaries
 carts = {}
 id_count = 0
 
@@ -23,7 +23,7 @@ def create_cart(new_cart: NewCart):
     """ """
 
     id_count += 1
-    carts[id_count] = {}
+    print(id_count)
 
     return {"cart_id": id_count}
 
