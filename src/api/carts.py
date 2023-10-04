@@ -67,7 +67,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
         return {"total_potions_bought": 0, "total_gold_paid": 0}
 
     with db.engine.begin() as connection:
-        for sku, quantity in cart:
+        for sku, quantity in cart.items():
             # check if any potions to sell
             sql_query = f"SELECT {types[sku]}potions FROM global_inventory"
             result = connection.execute(sqlalchemy.text(sql_query))
