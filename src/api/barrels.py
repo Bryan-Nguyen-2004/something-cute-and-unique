@@ -23,7 +23,7 @@ class Barrel(BaseModel):
 def post_deliver_barrels(barrels_delivered: list[Barrel]):
     """ """
     print(barrels_delivered)
-    types = {"RED_POTION_0":"num_red_", "GREEN_POTION_0":"num_green_", "BLUE_POTION_0":"num_blue_"}
+    types = {"SMALL_RED_BARREL":"num_red_", "SMALL_GREEN_BARREL":"num_green_", "SMALL_BLUE_BARREL":"num_blue_"}
 
     with db.engine.begin() as connection:
         # update ml and gold for every barrel delivered
@@ -50,8 +50,8 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
         # find corresponding small barrels in catalog
         for barrel in wholesale_catalog:
             if barrel.sku in types:
-                # if more then 10 potions or not enough gold then buy nothing
-                if getattr(first_row, f'{types[barrel.sku]}potions') >= 10 or first_row.gold < barrel.price or not barrel.quantity:
+                # if more then 15 potions or not enough gold then buy nothing
+                if getattr(first_row, f'{types[barrel.sku]}potions') >= 15 or first_row.gold < barrel.price or not barrel.quantity:
                     continue
                     
                 # add barrel to purchase plan
