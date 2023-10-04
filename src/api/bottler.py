@@ -50,7 +50,7 @@ def get_bottle_plan():
 
     with db.engine.begin() as connection:
         # Always mix all available ml if any exists
-        sql_query = "SELECT num_red_ml, num_blue_ml, num_green_ml FROM global_inventory ORDER BY "
+        sql_query = "SELECT num_red_ml, num_blue_ml, num_green_ml FROM global_inventory"
         result = connection.execute(sqlalchemy.text(sql_query))
         first_row = result.first()
 
