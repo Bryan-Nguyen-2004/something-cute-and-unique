@@ -1,1 +1,2 @@
 1. carts - deliver: if not enough potions, then may have subtracted gold and ml too early
+2. bottler - should i be checking if i have enough ml on deliver

@@ -77,8 +77,8 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
             if not getattr(first_row, f'{types[sku]}potions'):
                 return {"total_potions_bought": 0, "total_gold_paid": 0}
 
-            # update amount of ml and gold
-            sql_update = "UPDATE global_inventory SET num_red_potions = num_red_potions - 1, gold = gold + 50"
+            # update amount of potions and gold
+            sql_update = f"UPDATE global_inventory SET {types[sku]}potions = {types[sku]}potions - {quantity}, gold = gold + {quantity * 50}"
             connection.execute(sqlalchemy.text(sql_update))
 
             # update totals (every potion costs 50)
