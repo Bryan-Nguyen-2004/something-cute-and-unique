@@ -45,7 +45,7 @@ def get_catalog():
     answer = []
 
     for item in catalog:
-        if item.quantity:
+        if item["quantity"]:
             answer.append(item)
 
     return answer
