@@ -19,14 +19,25 @@ class PotionInventory(BaseModel):
 def post_deliver_bottles(potions_delivered: list[PotionInventory]):
     """ """
     print(potions_delivered)
+    types = ["num_red_", "num_green_", "num_blue_"]
 
     with db.engine.begin() as connection:
-        for potions in potions_delivered:
-            # update amount of ml
-            connection.execute(sqlalchemy.text("UPDATE global_inventory SET num_red_ml = num_red_ml - " + str(potions.quantity * 100)))
+        for potion in potions_delivered:
+            # figure out what potion was delivered
+            color = None
 
-            # update amount of potions
-            connection.execute(sqlalchemy.text("UPDATE global_inventory SET num_red_potions = num_red_potions + " + str(potions.quantity)))
+            for i in range(3):
+                if potion.potion_type[i]:
+                    color = types[i]
+
+            if not color: continue
+
+            # update amount of ml and potions
+            ml_update = f'UPDATE global_inventory SET {color}ml = {color}ml - {potion.quantity * 100}'
+            potion_update = f'UPDATE global_inventory SET {color}potions = {color}potions + {potion.quantity}'
+            
+            connection.execute(sqlalchemy.text(ml_update))
+            connection.execute(sqlalchemy.text(potion_update))
 
     return "OK"
 
@@ -37,23 +48,28 @@ def get_bottle_plan():
     Go from barrel to bottle.
     """
 
-    # Each bottle has a quantity of what proportion of red, blue, and
-    # green potion to add.
-    # Expressed in integers from 1 to 100 that must sum up to 100.
-
-    # Initial logic: bottle all barrels into red potions.
-
     with db.engine.begin() as connection:
-        # Always mix all available red ml if any exists
-        result = connection.execute(sqlalchemy.text("SELECT num_red_ml FROM global_inventory"))
+        # Always mix all available ml if any exists
+        sql_query = "SELECT num_red_ml, num_blue_ml, num_green_ml FROM global_inventory ORDER BY "
+        result = connection.execute(sqlalchemy.text(sql_query))
         first_row = result.first()
 
         # calculate amount of potions to create
-        amount = first_row.num_red_ml // 100
+        red_amount = first_row.num_red_ml // 100
+        green_amount = first_row.num_green_ml // 100
+        blue_amount = first_row.num_blue_ml // 100
 
     return [
             {
                 "potion_type": [100, 0, 0, 0],
-                "quantity": amount,
+                "quantity": red_amount,
+            },
+            {
+                "potion_type": [0, 100, 0, 0],
+                "quantity": green_amount,
+            },
+            {
+                "potion_type": [0, 0, 100, 0],
+                "quantity": blue_amount,
             }
         ]

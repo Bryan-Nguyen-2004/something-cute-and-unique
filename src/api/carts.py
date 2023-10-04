@@ -57,21 +57,32 @@ class CartCheckout(BaseModel):
 def checkout(cart_id: int, cart_checkout: CartCheckout):
     """ """
 
+    cart = carts[cart_id]
+    types = {"RED_POTION_0":"num_red_", "GREEN_POTION_0":"num_green_", "BLUE_POTION_0":"num_blue_"}
+    total_gold = 0
+    total_potions = 0
+
+    # check if cart exists
+    if cart_id not in carts:
+        return {"total_potions_bought": 0, "total_gold_paid": 0}
+
     with db.engine.begin() as connection:
+        for sku, quantity in cart:
+            # check if any potions to sell
+            sql_query = f"SELECT {types[sku]}potions FROM global_inventory"
+            result = connection.execute(sqlalchemy.text(sql_query))
+            first_row = result.first()
 
-        # check if any potions to sell
-        result = connection.execute(sqlalchemy.text("SELECT num_red_potions FROM global_inventory"))
-        first_row = result.first()
+            # if no potions then sell nothing
+            if not getattr(first_row, f'{types[sku]}potions'):
+                return {"total_potions_bought": 0, "total_gold_paid": 0}
 
-        # if no potions then sell nothing
-        if not first_row.num_red_potions:
-            return {"total_potions_bought": 0, "total_gold_paid": 0}
+            # update amount of ml and gold
+            sql_update = "UPDATE global_inventory SET num_red_potions = num_red_potions - 1, gold = gold + 50"
+            connection.execute(sqlalchemy.text(sql_update))
 
-        # update amount of red ml 
-        connection.execute(sqlalchemy.text("UPDATE global_inventory SET num_red_potions = num_red_potions - 1"))
+            # update totals (every potion costs 50)
+            total_gold += quantity * 50
+            total_potions += quantity
 
-        # update amount of gold
-        connection.execute(sqlalchemy.text("UPDATE global_inventory SET gold = gold + 50"))
-
-    # the catalog is hard-coded to only ever offer 1 red potion
-    return {"total_potions_bought": 1, "total_gold_paid": 50}
+    return {"total_potions_bought": total_potions, "total_gold_paid": total_gold}

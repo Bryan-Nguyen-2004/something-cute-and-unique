@@ -23,15 +23,13 @@ class Barrel(BaseModel):
 def post_deliver_barrels(barrels_delivered: list[Barrel]):
     """ """
     print(barrels_delivered)
+    types = {"RED_POTION_0":"num_red_", "GREEN_POTION_0":"num_green_", "BLUE_POTION_0":"num_blue_"}
 
     with db.engine.begin() as connection:
-
+        # update ml and gold for every barrel delivered
         for barrel in barrels_delivered:
-            # update amount of red ml 
-            connection.execute(sqlalchemy.text("UPDATE global_inventory SET num_red_ml = num_red_ml + " + str(barrel.ml_per_barrel * barrel.quantity)))
-
-            # update amount of gold
-            connection.execute(sqlalchemy.text("UPDATE global_inventory SET gold = gold - " + str(barrel.price * barrel.quantity)))
+            sql_update = f'UPDATE global_inventory SET {types[barrel.sku]}ml = {types[barrel.sku]}ml + {barrel.ml_per_barrel * barrel.quantity}, gold = gold - {barrel.price * barrel.quantity}'
+            connection.execute(sqlalchemy.text(sql_update))
 
     return "OK"
 
@@ -40,26 +38,23 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
 def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     """ """
     print(wholesale_catalog)
+    types = {"SMALL_RED_BARREL":"num_red_", "SMALL_GREEN_BARREL":"num_green_", "SMALL_BLUE_BARREL":"num_blue_"}
+    ans = []
 
     with db.engine.begin() as connection:
-
-        # purchase a new small red potion barrel only if the number of potions in inventory is less than 10 or enough gold
-        result = connection.execute(sqlalchemy.text("SELECT num_red_potions,gold FROM global_inventory"))
+        # query database
+        sql_query = "SELECT gold, num_red_potions, num_blue_potions, num_green_potions, FROM global_inventory"
+        result = connection.execute(sqlalchemy.text(sql_query))
         first_row = result.first()
 
-        # find small red barrel in catalog
-        barrel = None
-        for b in wholesale_catalog:
-            if b.sku == "SMALL_RED_BARREL":
-                barrel = b
-
-        # if more then 10 potions or not enough gold then buy nothing
-        if first_row.num_red_potions >= 10 or barrel == None or first_row.gold < barrel.price or not barrel.quantity:
-            return []
+        # find corresponding small barrels in catalog
+        for barrel in wholesale_catalog:
+            if barrel.sku in types:
+                # if more then 10 potions or not enough gold then buy nothing
+                if getattr(first_row, f'{types[barrel.sku]}potions') >= 10 or first_row.gold < barrel.price or not barrel.quantity:
+                    continue
+                    
+                # add barrel to purchase plan
+                ans.append({ "sku": barrel.sku, "quantity": 1 })
     
-    return [
-        {
-            "sku": "SMALL_RED_BARREL",
-            "quantity": 1,
-        }
-    ]
+    return ans
