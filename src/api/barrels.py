@@ -46,15 +46,20 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
         sql_query = "SELECT gold, num_red_potions, num_blue_potions, num_green_potions FROM global_inventory"
         result = connection.execute(sqlalchemy.text(sql_query))
         first_row = result.first()
+        updated_gold = first_row.gold
 
         # find corresponding small barrels in catalog
         for barrel in wholesale_catalog:
             if barrel.sku in types:
                 # if more then 15 potions or not enough gold then buy nothing
-                if getattr(first_row, f'{types[barrel.sku]}potions') >= 15 or first_row.gold < barrel.price or not barrel.quantity:
+                if getattr(first_row, f'{types[barrel.sku]}potions') >= 15 or updated_gold < barrel.price or not barrel.quantity:
                     continue
-                    
+                
+                updated_gold -= barrel.price
+
                 # add barrel to purchase plan
                 ans.append({ "sku": barrel.sku, "quantity": 1 })
+
+
     
     return ans
