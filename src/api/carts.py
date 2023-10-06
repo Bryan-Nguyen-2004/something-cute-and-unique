@@ -62,6 +62,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
     types = {"RED_POTION_0":"num_red_", "GREEN_POTION_0":"num_green_", "BLUE_POTION_0":"num_blue_"}
     total_gold = 0
     total_potions = 0
+    sql_updates = [] # exists so sql calls only made after I'm sure I have enough potions
 
     # check if cart exists
     if cart_id not in carts:
@@ -74,16 +75,23 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
             result = connection.execute(sqlalchemy.text(sql_query))
             first_row = result.first()
 
-            # if no potions then sell nothing
+            # if not enough potions, then sell nothing (none of the updates to database ran yet)
             if not getattr(first_row, f'{types[sku]}potions'):
                 return {"total_potions_bought": 0, "total_gold_paid": 0}
-
-            # update amount of potions and gold
+            
+            # adds update of potions and gold to list
             sql_update = f"UPDATE global_inventory SET {types[sku]}potions = {types[sku]}potions - {quantity}, gold = gold + {quantity * 50}"
-            connection.execute(sqlalchemy.text(sql_update))
+            sql_updates.append(sql_update)
 
             # update totals (every potion costs 50)
             total_gold += quantity * 50
             total_potions += quantity
+
+        # execute all updates
+        for sql_update in sql_updates:
+            connection.execute(sqlalchemy.text(sql_update))
+    
+    # resets cart
+    carts[cart_id] = {}
 
     return {"total_potions_bought": total_potions, "total_gold_paid": total_gold}
