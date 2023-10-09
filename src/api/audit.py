@@ -36,6 +36,6 @@ class Result(BaseModel):
 @router.post("/results")
 def post_audit_results(audit_explanation: Result):
     """ """
-    print(audit_explanation)
+    print("audit:",audit_explanation)
 
     return "OK"
