@@ -89,15 +89,16 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
             if sku in types: 
                 # calculate amount of barrels to buy
                 amount = min(split_gold // price, quantity)
-                print("amount:",amount)
+
                 if amount == 0:
-                    if gold >= price: amount = 1
-                    else: break
-                print("updated_amount:",amount)
+                    if gold >= price:
+                        ans.append({ "sku": barrel.sku, "quantity": amount })
+                    break
+
                 gold -= price * amount
-                print("gold:",gold)
+
                 if gold < 0: break
-                print("updated_gold:",gold)
+
                 # add barrel to purchase plan
                 ans.append({ "sku": barrel.sku, "quantity": amount })
 
