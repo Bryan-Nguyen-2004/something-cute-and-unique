@@ -24,7 +24,8 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory]):
     with db.engine.begin() as connection:
         for potion in potions_delivered:
             # destructures potion object
-            potion_type, quantity = potion
+            potion_type = tuple(potion.potion_type)
+            quantity = potion.quantity
             red_ml, green_ml, blue_ml, dark_ml = potion_type
 
             # update catalog inventory
