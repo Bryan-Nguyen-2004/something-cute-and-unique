@@ -92,7 +92,8 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
 
                 if amount == 0:
                     if gold >= price:
-                        ans.append({ "sku": barrel.sku, "quantity": amount })
+                        amount+=1
+                        ans.append({ "sku": sku, "quantity": amount })
                     break
 
                 gold -= price * amount
@@ -100,6 +101,6 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
                 if gold < 0: break
 
                 # add barrel to purchase plan
-                ans.append({ "sku": barrel.sku, "quantity": amount })
+                ans.append({ "sku": sku, "quantity": amount })
 
     return ans
