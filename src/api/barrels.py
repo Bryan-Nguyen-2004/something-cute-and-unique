@@ -82,7 +82,8 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
 
         # find corresponding small barrels in catalog
         for barrel in wholesale_catalog:
-            sku, ml_per_barrel, potion_type, price, quantity = barrel
+            sku, ml_per_barrel, potion_type, price, quantity = barrel.sku, barrel.ml_per_barrel, barrel.potion_type, barrel.price, barrel.quantity
+            red_ml, green_ml, blue_ml, dark_ml = barrel.potion_type
             print(sku, ml_per_barrel, potion_type, price, quantity)
 
             if sku in types: 
