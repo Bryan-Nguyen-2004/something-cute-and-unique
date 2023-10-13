@@ -107,6 +107,12 @@ def get_bottle_plan():
             
             # add to answer if amount > 0
             if amount:
+                # update globals
+                global_red_ml -= red_ml * amount
+                global_green_ml -= green_ml * amount
+                global_blue_ml -= blue_ml * amount
+                global_dark_ml -= dark_ml * amount
+
                 answer.append(
                     {
                         "potion_type": [red_ml, green_ml, blue_ml, dark_ml],

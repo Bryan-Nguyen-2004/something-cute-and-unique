@@ -41,12 +41,12 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
                 """
                 UPDATE global_inventory 
                 SET gold = gold - :gold, 
-                num_red_ml = num_red_ml + :(1,0,0,0), 
-                num_green_ml = num_green_ml + :(1,0,0,0), 
-                num_blue_ml = num_blue_ml + :(1,0,0,0), 
-                num_dark_ml = num_dark_ml + :(0,0,0,1)
+                num_red_ml = num_red_ml + :num_red_ml,
+                num_green_ml = num_green_ml + :num_green_ml, 
+                num_blue_ml = num_blue_ml + :num_blue_ml, 
+                num_dark_ml = num_dark_ml + :num_dark_ml
                 """
-            ), [global_vals])
+            ), [{"gold": global_vals["gold"], "num_red_ml": global_vals[(1,0,0,0)], "num_green_ml": global_vals[(0,1,0,0)], "num_blue_ml": global_vals[(0,0,1,0)], "num_dark_ml": global_vals[(0,0,0,1)]}])
 
     return "OK"
 
@@ -88,7 +88,7 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
                     if gold >= price: amount = 1
                     else: break
 
-                gold -= barrel.price * amount
+                gold -= price * amount
                 if gold < 0: break
 
                 # add barrel to purchase plan
