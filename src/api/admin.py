@@ -31,6 +31,10 @@ def reset():
             )
         )
 
+        connection.execute(sqlalchemy.text("UPDATE catalog SET stock = 0"))
+        connection.execute(sqlalchemy.text("DELETE FROM carts"))
+        connection.execute(sqlalchemy.text("DELETE FROM carts_items"))
+
     return "OK"
 
 
