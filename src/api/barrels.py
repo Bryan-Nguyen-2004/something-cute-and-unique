@@ -78,19 +78,25 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
         # gold is split to buy equal amount of each barrel
         split_gold = gold // 3
 
+        print(gold, num_red_ml, num_blue_ml, num_green_ml, split_gold)
+
         # find corresponding small barrels in catalog
         for barrel in wholesale_catalog:
             sku, ml_per_barrel, potion_type, price, quantity = barrel
+            print(sku, ml_per_barrel, potion_type, price, quantity)
+
             if sku in types: 
                 # calculate amount of barrels to buy
                 amount = min(split_gold // price, quantity)
+                print("amount:",amount)
                 if amount == 0:
                     if gold >= price: amount = 1
                     else: break
-
+                print("updated_amount:",amount)
                 gold -= price * amount
+                print("gold:",gold)
                 if gold < 0: break
-
+                print("updated_gold:",gold)
                 # add barrel to purchase plan
                 ans.append({ "sku": barrel.sku, "quantity": amount })
 
