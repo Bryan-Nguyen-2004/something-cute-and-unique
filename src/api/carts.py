@@ -105,7 +105,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
             sqlalchemy.text(
                 """
                 UPDATE catalog
-                SET stock = catalog.stock - cart_items.stock
+                SET stock = catalog.stock - cart_items.quantity
                 FROM cart_items
                 WHERE catalog.id = cart_items.catalog_id AND cart_items.cart_id = :cart_id
                 """
