@@ -19,17 +19,14 @@ def get_inventory():
         # query globals
         result = connection.execute(
             sqlalchemy.text(
-                "SELECT gold, num_red_ml, num_blue_ml, num_green_ml, num_dark_ml FROM global_inventory"
-            )
-        )
+                "SELECT gold, num_red_ml, num_blue_ml, num_green_ml, num_dark_ml FROM global_inventory"))
+        
         gold, num_red_ml, num_blue_ml, num_green_ml, num_dark_ml = result.first()
 
         # query catalog
         result = connection.execute(
             sqlalchemy.text(
-                "SELECT SUM(stock) AS total_stock FROM catalog"
-            )
-        )
+                "SELECT SUM(stock) AS total_stock FROM catalog"))
 
         # calculate totals
         total_potions = result.first().total_stock

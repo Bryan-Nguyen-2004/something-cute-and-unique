@@ -28,8 +28,7 @@ def reset():
                 num_green_ml = 0, 
                 num_dark_ml = 0
                 """
-            )
-        )
+            ))
 
         connection.execute(sqlalchemy.text("UPDATE catalog SET stock = 0"))
         connection.execute(sqlalchemy.text("DELETE FROM carts"))

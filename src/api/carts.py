@@ -25,10 +25,9 @@ def create_cart(new_cart: NewCart):
                 INSERT INTO carts (customer_name)
                 VALUES (:customer)
                 RETURNING id
-                """,
-                [{"customer": new_cart.customer}]
-            )
-        )
+                """
+            ), [{"customer": new_cart.customer}])
+        
         cart_id = result.first().id
     
     print("cart_id:", cart_id)
@@ -59,10 +58,8 @@ def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
                 SELECT :cart_id, catalog.id, :quantity 
                 FROM catalog 
                 WHERE catalog.sku = :item_sku
-                """,
-                [{"cart_id": cart_id, "quantity": cart_item.quantity, "item_sku": item_sku}]
-            )
-        )
+                """
+            ), [{"cart_id": cart_id, "quantity": cart_item.quantity, "item_sku": item_sku}])
     
     print(f"added {cart_item.quantity} {item_sku} into cart #{cart_id}")
 
@@ -88,10 +85,8 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
                 FROM cart_items
                 JOIN catalog ON cart_items.catalog_id = catalog.id
                 WHERE cart_items.cart_id = :cart_id
-                """,
-                [{"cart_id": cart_id}]
-            )
-        )
+                """
+            ), [{"cart_id": cart_id}])
 
         # iterate each item in cart
         for quantity, stock, price in result:
@@ -113,10 +108,8 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
                 SET inventory = catalog.inventory - cart_items.quantity
                 FROM cart_items
                 WHERE catalog.id = cart_items.catalog_id AND cart_items.cart_id = :cart_id
-                """,
-                [{"cart_id": cart_id}]
-            )
-        )
+                """
+            ), [{"cart_id": cart_id}])
 
         # updates gold in global_inventory
         connection.execute(
@@ -124,9 +117,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
                 """
                 UPDATE global_inventory
                 SET gold = gold - :total_gold
-                """,
-                [{"total_gold": total_gold}]
-            )
-        )
+                """
+                ), [{"total_gold": total_gold}])
 
     return {"total_potions_bought": total_potions, "total_gold_paid": total_gold}

@@ -45,10 +45,8 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
                 num_green_ml = num_green_ml + :(1,0,0,0), 
                 num_blue_ml = num_blue_ml + :(1,0,0,0), 
                 num_dark_ml = num_dark_ml + :(0,0,0,1)
-                """,
-                [global_vals]
-            )
-        )
+                """
+            ), [global_vals])
 
     return "OK"
 
@@ -74,9 +72,7 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
         # query globals
         result = connection.execute(
             sqlalchemy.text(
-                "SELECT gold, num_red_ml, num_blue_ml, num_green_ml FROM global_inventory"
-            )
-        )
+                "SELECT gold, num_red_ml, num_blue_ml, num_green_ml FROM global_inventory"))
         gold, num_red_ml, num_blue_ml, num_green_ml = result.first()
 
         # gold is split to buy equal amount of each barrel

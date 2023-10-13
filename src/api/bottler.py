@@ -39,10 +39,8 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory]):
                     blue_ml = :blue_ml AND
                     dark_ml = :dark_ml
                     RETURNING id
-                    """,
-                    [{"quantity": quantity, "red_ml": red_ml, "green_ml": green_ml, "blue_ml": blue_ml, "dark_ml": dark_ml}]
-                )
-            )
+                    """
+                ), [{"quantity": quantity, "red_ml": red_ml, "green_ml": green_ml, "blue_ml": blue_ml, "dark_ml": dark_ml}])
 
             # check to see that one and only one catalog item stock was updated
             if result.rowcount != 1:
@@ -57,10 +55,8 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory]):
                     num_green_ml = num_green_ml - :green_ml, 
                     num_blue_ml = num_blue_ml - :blue_ml, 
                     num_dark_ml = num_dark_ml - :dark_ml
-                    """,
-                    [{"red_ml": red_ml*quantity, "green_ml": green_ml*quantity, "blue_ml": blue_ml*quantity, "dark_ml": dark_ml*quantity}]
-                )
-            )
+                    """
+                ), [{"red_ml": red_ml*quantity, "green_ml": green_ml*quantity, "blue_ml": blue_ml*quantity, "dark_ml": dark_ml*quantity}])
 
     return "OK"
 

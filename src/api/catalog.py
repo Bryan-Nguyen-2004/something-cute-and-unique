@@ -20,8 +20,7 @@ def get_catalog():
                 FROM catalog
                 WHERE stock > 0
                 """
-            )
-        )
+            ))
         
         # create catalog with queried quantities
         for sku, name, quantity, price, potion_type in result:
