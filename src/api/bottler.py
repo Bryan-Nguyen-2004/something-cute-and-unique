@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from src.api import auth
 import sqlalchemy
 from src import database as db
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(
     prefix="/bottler",
@@ -19,25 +20,47 @@ class PotionInventory(BaseModel):
 def post_deliver_bottles(potions_delivered: list[PotionInventory]):
     """ """
     print("potions_delivered:",potions_delivered)
-    types = ["num_red_", "num_green_", "num_blue_"]
 
     with db.engine.begin() as connection:
         for potion in potions_delivered:
-            # figure out what potion was delivered
-            color = None
+            # destructures potion object
+            quantity, potion_type = potion
+            red_ml, green_ml, blue_ml, dark_ml = potion_type
 
-            for i in range(3):
-                if potion.potion_type[i]:
-                    color = types[i]
+            # update catalog inventory
+            result = connection.execute(
+                sqlalchemy.text(
+                    """
+                    UPDATE catalog 
+                    SET stock = stock + :quantity
+                    WHERE 
+                    red_ml = :red_ml AND
+                    green_ml = :green_ml AND
+                    blue_ml = :blue_ml AND
+                    dark_ml = :dark_ml
+                    RETURNING id
+                    """,
+                    [{"quantity": quantity, "red_ml": red_ml, "green_ml": green_ml, "blue_ml": blue_ml, "dark_ml": dark_ml}]
+                )
+            )
 
-            if not color: continue
+            # check to see that one and only one catalog item stock was updated
+            if result.rowcount != 1:
+                raise IntegrityError("Failed to update catalog item stock")
 
-            # update amount of ml and potions
-            ml_update = f'UPDATE global_inventory SET {color}ml = {color}ml - {potion.quantity * 100}'
-            potion_update = f'UPDATE global_inventory SET {color}potions = {color}potions + {potion.quantity}'
-            
-            connection.execute(sqlalchemy.text(ml_update))
-            connection.execute(sqlalchemy.text(potion_update))
+            # update global inventory
+            connection.execute(
+                sqlalchemy.text(
+                    """
+                    UPDATE global_inventory 
+                    SET num_red_ml = num_red_ml - :red_ml, 
+                    num_green_ml = num_green_ml - :green_ml, 
+                    num_blue_ml = num_blue_ml - :blue_ml, 
+                    num_dark_ml = num_dark_ml - :dark_ml
+                    """,
+                    [{"red_ml": red_ml*quantity, "green_ml": green_ml*quantity, "blue_ml": blue_ml*quantity, "dark_ml": dark_ml*quantity}]
+                )
+            )
 
     return "OK"
 
@@ -49,27 +72,50 @@ def get_bottle_plan():
     """
 
     with db.engine.begin() as connection:
-        # Always mix all available ml if any exists
-        sql_query = "SELECT num_red_ml, num_blue_ml, num_green_ml FROM global_inventory"
-        result = connection.execute(sqlalchemy.text(sql_query))
-        first_row = result.first()
+        # query globals
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT num_red_ml, num_blue_ml, num_green_ml, num_dark_ml 
+                FROM global_inventory
+                """
+            )
+        )
+        global_red_ml, global_green_ml, global_blue_ml, global_dark_ml = result.first()
 
-        # calculate amount of potions to create
-        red_amount = first_row.num_red_ml // 100
-        green_amount = first_row.num_green_ml // 100
-        blue_amount = first_row.num_blue_ml // 100
+        # query catalog 
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT stock, red_ml, green_ml, blue_ml, dark_ml 
+                FROM catalog
+                ORDER BY stock
+                """
+            )
+        )
+        
+        answer = []
 
-    return [
-            {
-                "potion_type": [100, 0, 0, 0],
-                "quantity": red_amount,
-            },
-            {
-                "potion_type": [0, 100, 0, 0],
-                "quantity": green_amount,
-            },
-            {
-                "potion_type": [0, 0, 100, 0],
-                "quantity": blue_amount,
-            }
-        ]
+        # iterate through every catalog item (lowest stock first)
+        for stock, red_ml, green_ml, blue_ml, dark_ml in result:
+            # check if enough ml
+            if global_red_ml < red_ml or global_green_ml < green_ml or global_blue_ml < blue_ml or global_dark_ml < dark_ml:
+                continue
+
+            # calculate how many to make (5 at most)
+            amount = 5
+            if red_ml > 0: amount = min(amount, global_red_ml // red_ml)
+            if green_ml > 0: amount = min(amount, global_green_ml // green_ml)
+            if blue_ml > 0: amount = min(amount, global_blue_ml // blue_ml)
+            if dark_ml > 0: amount = min(amount, global_dark_ml // dark_ml)
+            
+            # add to answer if amount > 0
+            if amount:
+                answer.append(
+                    {
+                        "potion_type": [red_ml, green_ml, blue_ml, dark_ml],
+                        "quantity": amount,
+                    }
+                )
+
+    return answer

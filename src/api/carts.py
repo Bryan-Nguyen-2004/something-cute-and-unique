@@ -14,20 +14,26 @@ router = APIRouter(
 class NewCart(BaseModel):
     customer: str
 
-# stored as a dictionary of dictionaries
-carts = {}
-id_count = 0
-
 @router.post("/")
 def create_cart(new_cart: NewCart):
     """ """
-    global carts
-    global id_count
+    with db.engine.begin() as connection:
+        # creates new cart
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                INSERT INTO carts (customer_name)
+                VALUES (:customer)
+                RETURNING id
+                """,
+                [{"customer": new_cart.customer}]
+            )
+        )
+        cart_id = result.first().id
     
-    id_count += 1
-    carts[id_count] = {}
+    print("cart_id:", cart_id)
 
-    return {"cart_id": id_count}
+    return {"cart_id": cart_id}
 
 
 @router.get("/{cart_id}")
@@ -44,8 +50,21 @@ class CartItem(BaseModel):
 @router.post("/{cart_id}/items/{item_sku}")
 def set_item_quantity(cart_id: int, item_sku: str, cart_item: CartItem):
     """ """
-    global carts
-    carts[cart_id][item_sku] = cart_item.quantity
+    with db.engine.begin() as connection:
+        # inserts new item into cart_items
+        connection.execute(
+            sqlalchemy.text(
+                """
+                INSERT INTO cart_items (cart_id, catalog_id, quantity)
+                SELECT :cart_id, catalog.id, :quantity 
+                FROM catalog 
+                WHERE catalog.sku = :item_sku
+                """,
+                [{"cart_id": cart_id, "quantity": cart_item.quantity, "item_sku": item_sku}]
+            )
+        )
+    
+    print(f"added {cart_item.quantity} {item_sku} into cart #{cart_id}")
 
     return "OK"
 
@@ -56,42 +75,58 @@ class CartCheckout(BaseModel):
 @router.post("/{cart_id}/checkout")
 def checkout(cart_id: int, cart_checkout: CartCheckout):
     """ """
-    print("cart_payment:",cart_checkout.payment)
-
-    cart = carts[cart_id]
-    types = {"RED_POTION_0":"num_red_", "GREEN_POTION_0":"num_green_", "BLUE_POTION_0":"num_blue_"}
     total_gold = 0
     total_potions = 0
-    sql_updates = [] # exists so sql calls only made after I'm sure I have enough potions
-
-    # check if cart exists
-    if cart_id not in carts:
-        return {"total_potions_bought": 0, "total_gold_paid": 0}
 
     with db.engine.begin() as connection:
-        for sku, quantity in cart.items():
-            # check if any potions to sell
-            sql_query = f"SELECT {types[sku]}potions FROM global_inventory"
-            result = connection.execute(sqlalchemy.text(sql_query))
-            first_row = result.first()
+        # NOTE: joins cart_items and catalog based on catalog_id
+        #       and only includes the rows where cart_id = :cart_id
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT cart_items.quantity, catalog.stock, catalog.price
+                FROM cart_items
+                JOIN catalog ON cart_items.catalog_id = catalog.id
+                WHERE cart_items.cart_id = :cart_id
+                """,
+                [{"cart_id": cart_id}]
+            )
+        )
 
-            # if not enough potions, then sell nothing (none of the updates to database ran yet)
-            if not getattr(first_row, f'{types[sku]}potions'):
+        # iterate each item in cart
+        for quantity, stock, price in result:
+            # check if enough stock
+            if stock < quantity:
                 return {"total_potions_bought": 0, "total_gold_paid": 0}
             
-            # adds update of potions and gold to list
-            sql_update = f"UPDATE global_inventory SET {types[sku]}potions = {types[sku]}potions - {quantity}, gold = gold + {quantity * 50}"
-            sql_updates.append(sql_update)
-
-            # update totals (every potion costs 50)
-            total_gold += quantity * 50
+            # update totals
+            total_gold += price * quantity
             total_potions += quantity
 
-        # execute all updates
-        for sql_update in sql_updates:
-            connection.execute(sqlalchemy.text(sql_update))
-    
-    # resets cart
-    carts[cart_id] = {}
+        # NOTE: cross joins cart_items and catalog and filters with conditions
+        # join condition - catalog.id = cart_items.catalog_id
+        # filter condition - cart_items.cart_id = :cart_id
+        connection.execute(
+            sqlalchemy.text(
+                """
+                UPDATE catalog
+                SET inventory = catalog.inventory - cart_items.quantity
+                FROM cart_items
+                WHERE catalog.id = cart_items.catalog_id AND cart_items.cart_id = :cart_id
+                """,
+                [{"cart_id": cart_id}]
+            )
+        )
+
+        # updates gold in global_inventory
+        connection.execute(
+            sqlalchemy.text(
+                """
+                UPDATE global_inventory
+                SET gold = gold - :total_gold
+                """,
+                [{"total_gold": total_gold}]
+            )
+        )
 
     return {"total_potions_bought": total_potions, "total_gold_paid": total_gold}

@@ -9,43 +9,31 @@ def get_catalog():
     """
     Each unique item combination must have only a single price.
     """
+    catalog = []
 
     with db.engine.begin() as connection:
-        # query for values
-        sql_query = "SELECT num_red_potions, num_blue_potions, num_green_potions, gold FROM global_inventory"
-        result = connection.execute(sqlalchemy.text(sql_query))
-        first_row = result.first()
+        # query catalog for items in stock
+        result = connection.execute(
+            sqlalchemy.text(
+                """
+                SELECT sku, name, stock AS quantity, price, ARRAY[red_ml, green_ml, blue_ml, dark_ml] AS potion_type
+                FROM catalog
+                WHERE stock > 0
+                """
+            )
+        )
+        
+        # create catalog with queried quantities
+        for sku, name, quantity, price, potion_type in result:
+            item = {
+                "sku": sku,
+                "name": name,
+                "quantity": quantity,
+                "price": price,
+                "potion_type": potion_type
+            }
+            catalog.append(item)
 
-    # create catalog with quered quantities
-    catalog = [
-        {
-            "sku": "RED_POTION_0",
-            "name": "red potion",
-            "quantity": first_row.num_red_potions,
-            "price": 50,
-            "potion_type": [100, 0, 0, 0],
-        },
-        {
-            "sku": "GREEN_POTION_0",
-            "name": "green potion",
-            "quantity": first_row.num_green_potions,
-            "price": 50,
-            "potion_type": [0, 100, 0, 0],
-        }, 
-        {
-            "sku": "BLUE_POTION_0",
-            "name": "blue potion",
-            "quantity": first_row.num_blue_potions,
-            "price": 50,
-            "potion_type": [0, 0, 100, 0],
-        }
-    ]
+    print("catalog:", catalog)
 
-    # answer only includes items from catalog with quantity > 0
-    answer = []
-
-    for item in catalog:
-        if item["quantity"]:
-            answer.append(item)
-
-    return answer
+    return catalog

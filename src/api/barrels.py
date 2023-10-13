@@ -23,13 +23,32 @@ class Barrel(BaseModel):
 def post_deliver_barrels(barrels_delivered: list[Barrel]):
     """ """
     print("barrels_delivered:",barrels_delivered)
-    types = {"SMALL_RED_BARREL":"num_red_", "SMALL_GREEN_BARREL":"num_green_", "SMALL_BLUE_BARREL":"num_blue_"}
+    
+    global_vals = { "gold":0, (1,0,0,0):0, (0,1,0,0):0, (0,0,1,0):0, (0,0,0,1):0 }
+    
+    # update global_vals for each barrel delivered
+    for barrel in barrels_delivered:
+        potion_type = tuple(barrel.potion_type)
+        if potion_type not in global_vals: raise Exception(f"Invalid potion type: {potion_type}")
+
+        global_vals[potion_type] += (barrel.ml_per_barrel * barrel.quantity)
+        global_vals["gold"] += (barrel.price * barrel.quantity)
 
     with db.engine.begin() as connection:
-        # update ml and gold for every barrel delivered
-        for barrel in barrels_delivered:
-            sql_update = f'UPDATE global_inventory SET {types[barrel.sku]}ml = {types[barrel.sku]}ml + {barrel.ml_per_barrel * barrel.quantity}, gold = gold - {barrel.price * barrel.quantity}'
-            connection.execute(sqlalchemy.text(sql_update))
+        # update global inventory
+        connection.execute(
+            sqlalchemy.text(
+                """
+                UPDATE global_inventory 
+                SET gold = gold - :gold, 
+                num_red_ml = num_red_ml + :(1,0,0,0), 
+                num_green_ml = num_green_ml + :(1,0,0,0), 
+                num_blue_ml = num_blue_ml + :(1,0,0,0), 
+                num_dark_ml = num_dark_ml + :(0,0,0,1)
+                """,
+                [global_vals]
+            )
+        )
 
     return "OK"
 
@@ -52,24 +71,31 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     ans = []
 
     with db.engine.begin() as connection:
-        # query database
-        sql_query = "SELECT gold, num_red_potions, num_blue_potions, num_green_potions FROM global_inventory"
-        result = connection.execute(sqlalchemy.text(sql_query))
-        first_row = result.first()
-        updated_gold = first_row.gold
+        # query globals
+        result = connection.execute(
+            sqlalchemy.text(
+                "SELECT gold, num_red_ml, num_blue_ml, num_green_ml FROM global_inventory"
+            )
+        )
+        gold, num_red_ml, num_blue_ml, num_green_ml = result.first()
+
+        # gold is split to buy equal amount of each barrel
+        split_gold = gold // 3
 
         # find corresponding small barrels in catalog
         for barrel in wholesale_catalog:
-            if barrel.sku in types:
-                # if more then 15 potions or not enough gold then buy nothing
-                if getattr(first_row, f'{types[barrel.sku]}potions') >= 15 or updated_gold < barrel.price or not barrel.quantity:
-                    continue
-                
-                updated_gold -= barrel.price
+            sku, ml_per_barrel, potion_type, price, quantity = barrel
+            if sku in types: 
+                # calculate amount of barrels to buy
+                amount = min(split_gold // price, quantity)
+                if amount == 0:
+                    if gold >= price: amount = 1
+                    else: break
+
+                gold -= barrel.price * amount
+                if gold < 0: break
 
                 # add barrel to purchase plan
-                ans.append({ "sku": barrel.sku, "quantity": 1 })
+                ans.append({ "sku": barrel.sku, "quantity": amount })
 
-
-    
     return ans
