@@ -113,8 +113,8 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
                     
                     # update gold
                     gold -= price * amount
-                    i-=1
-                    split_gold = gold // i
+                    i -= 1
+                    if i > 0: split_gold = gold // i
 
                     if gold < 0: break
 
