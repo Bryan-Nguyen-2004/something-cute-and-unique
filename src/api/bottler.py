@@ -31,12 +31,36 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory]):
                 red_ml, green_ml, blue_ml, dark_ml = potion_type
                 ml_changes = []
 
+                # query for catalog id
+                result = connection.execute(
+                    sqlalchemy.text(
+                        """
+                        SELECT id, sku
+                        FROM catalog 
+                        WHERE 
+                        red_ml = :red_ml AND
+                        green_ml = :green_ml AND
+                        blue_ml = :blue_ml AND
+                        dark_ml = :dark_ml
+                        """
+                    ), [{"red_ml": red_ml, "green_ml": green_ml, "blue_ml": blue_ml, "dark_ml": dark_ml}])
+                catalog_id, sku = result.first()
+
                 # insert transaction w/ description
                 result = connection.execute(
                     sqlalchemy.text(
                         "INSERT INTO transactions (description) VALUES (:description) RETURNING id"
-                    ), [{"description": f"Received {quantity} {potion_type} potions"}])
+                    ), [{"description": f"Received {quantity} {sku} of type {potion_type}"}])
                 transaction_id = result.scalar_one()
+
+                # insert potion stock changes into catalog ledger
+                connection.execute(
+                    sqlalchemy.text(
+                        """
+                        INSERT INTO ledger_catalog (transaction_id, catalog_id, change)
+                        VALUES (:transaction_id, :catalog_id, :change)
+                        """
+                    ), [{"transaction_id": transaction_id, "catalog_id": catalog_id, "change": quantity}])
 
                 # append changes to ml_changes
                 if red_ml > 0:
@@ -56,30 +80,6 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory]):
                         VALUES (:transaction_id, :type, :change)
                         """
                     ), ml_changes)
-                
-                # query for catalog id
-                result = connection.execute(
-                    sqlalchemy.text(
-                        """
-                        SELECT id 
-                        FROM catalog 
-                        WHERE 
-                        red_ml = :red_ml AND
-                        green_ml = :green_ml AND
-                        blue_ml = :blue_ml AND
-                        dark_ml = :dark_ml
-                        """
-                    ), [{"red_ml": red_ml, "green_ml": green_ml, "blue_ml": blue_ml, "dark_ml": dark_ml}])
-                catalog_id = result.scalar_one()
-                
-                # insert potion stock changes into catalog ledger
-                connection.execute(
-                    sqlalchemy.text(
-                        """
-                        INSERT INTO ledger_catalog (transaction_id, catalog_id, change)
-                        VALUES (:transaction_id, :catalog_id, :change)
-                        """
-                    ), [{"transaction_id": transaction_id, "catalog_id": catalog_id, "change": quantity}])
     except DBAPIError as error:
         print(f"Error returned: <<<{error}>>>")
 
