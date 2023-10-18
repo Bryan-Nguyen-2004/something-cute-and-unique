@@ -105,7 +105,7 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
                 result = connection.execute(
                     sqlalchemy.text(
                         "INSERT INTO transactions (description, cart_id) VALUES (:description, :cart_id) RETURNING id"
-                    ), [{"description": f"{customer_name} bought {quantity} {sku} for {price} gold each", "cart_id": cart_id}])
+                    ), [{"description": f"Sold {quantity} {sku} to {customer_name} for {price} gold each", "cart_id": cart_id}])
                 transaction_id = result.scalar_one()
 
                 # update catalog ledger
