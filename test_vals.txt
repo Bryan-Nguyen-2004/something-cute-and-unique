@@ -1,0 +1,41 @@
+just a place for me to store test vals :)
+
+
+[
+  {
+    "sku": "SMALL_RED_BARREL",
+    "ml_per_barrel": 500,
+    "potion_type": [
+      1,0,0,0
+    ],
+    "price": 100,
+    "quantity": 10
+  },
+  {
+    "sku": "SMALL_ORANGE_BARREL",
+    "ml_per_barrel": 500,
+    "potion_type": [
+      1,0,0,0
+    ],
+    "price": 100,
+    "quantity": 10
+  },
+  {
+    "sku": "SMALL_GREEN_BARREL",
+    "ml_per_barrel": 500,
+    "potion_type": [
+      0,1,0,0
+    ],
+    "price": 100,
+    "quantity": 10
+  },
+  {
+    "sku": "SMALL_BLUE_BARREL",
+    "ml_per_barrel": 500,
+    "potion_type": [
+      0,0,1,0
+    ],
+    "price": 100,
+    "quantity": 10
+  }
+]

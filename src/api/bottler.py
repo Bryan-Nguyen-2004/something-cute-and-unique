@@ -117,15 +117,20 @@ def get_bottle_plan():
             result = connection.execute(
                 sqlalchemy.text(
                     """
-                    SELECT red_ml, green_ml, blue_ml, dark_ml 
-                    FROM catalog
+                    SELECT c.red_ml, c.green_ml, c.blue_ml, c.dark_ml, c_l.stock
+                    FROM catalog AS c
+                    JOIN (
+                        SELECT catalog_id, SUM(change) AS stock
+                        FROM ledger_catalog
+                        GROUP BY catalog_id
+                    ) AS l_c ON c.id = l_c.catalog_id
                     ORDER BY stock
                     WHERE dark_ml = 0
                     """
                 ))
             
             # iterate through every catalog item (lowest stock first)
-            for potion_red_ml, potion_green_ml, potion_blue_ml, potion_dark_ml in result:
+            for potion_red_ml, potion_green_ml, potion_blue_ml, potion_dark_ml, stock in result:
                 # check if enough ml
                 if global_red_ml < potion_red_ml or global_green_ml < potion_green_ml or global_blue_ml < potion_blue_ml or global_dark_ml < potion_dark_ml:
                     continue

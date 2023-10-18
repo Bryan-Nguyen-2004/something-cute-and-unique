@@ -98,6 +98,9 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
 
             # iterate each item in cart
             for catalog_id, quantity, price, sku, customer_name in result:
+                total_gold += price * quantity
+                total_potions += quantity
+
                 # insert transaction
                 result = connection.execute(
                     sqlalchemy.text(
