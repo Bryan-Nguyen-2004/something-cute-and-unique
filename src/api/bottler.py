@@ -123,9 +123,9 @@ def get_bottle_plan():
                         SELECT catalog_id, SUM(change) AS stock
                         FROM ledger_catalog
                         GROUP BY catalog_id
-                    ) AS l_c ON c.id = l_c.catalog_id
-                    ORDER BY stock
-                    WHERE dark_ml = 0
+                    ) AS c_l ON c.id = c_l.catalog_id
+                    WHERE c.dark_ml = 0
+                    ORDER BY c_l.stock
                     """
                 ))
             
