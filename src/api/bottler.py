@@ -119,7 +119,7 @@ def get_bottle_plan():
                     """
                     SELECT c.red_ml, c.green_ml, c.blue_ml, c.dark_ml, c_l.stock
                     FROM catalog AS c
-                    JOIN (
+                    LEFT JOIN (
                         SELECT catalog_id, SUM(change) AS stock
                         FROM ledger_catalog
                         GROUP BY catalog_id
