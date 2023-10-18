@@ -4,6 +4,7 @@ from src.api import auth
 import math
 import sqlalchemy
 from src import database as db
+from sqlalchemy.exc import DBAPIError
 
 router = APIRouter(
     prefix="/audit",
@@ -14,23 +15,30 @@ router = APIRouter(
 @router.get("/inventory")
 def get_inventory():
     """ """
+    try:
+        with db.engine.begin() as connection:
+            totals = {}
+            
+            # query globals
+            result = connection.execute(
+                sqlalchemy.text(
+                    "SELECT type, SUM(change) AS total FROM ledger_global GROUP BY type ORDER BY type"))
+            
+            # destructure globals
+            for type, total in result:
+                totals[type] = total
+            blue_ml, dark_ml, gold, green_ml, red_ml = totals.values()
 
-    with db.engine.begin() as connection:
-        # query globals
-        result = connection.execute(
-            sqlalchemy.text(
-                "SELECT gold, num_red_ml, num_blue_ml, num_green_ml, num_dark_ml FROM global_inventory"))
-        
-        gold, num_red_ml, num_blue_ml, num_green_ml, num_dark_ml = result.first()
+            # query catalog
+            result = connection.execute(
+                sqlalchemy.text(
+                    "SELECT SUM(change) AS total FROM ledger_catalog"))
 
-        # query catalog
-        result = connection.execute(
-            sqlalchemy.text(
-                "SELECT SUM(stock) AS total_stock FROM catalog"))
-
-        # calculate totals
-        total_potions = result.first().total_stock
-        total_ml = num_red_ml + num_blue_ml + num_green_ml + num_dark_ml
+            # calculate totals
+            total_potions = result.scalar_one()
+            total_ml = red_ml + blue_ml + green_ml + dark_ml
+    except DBAPIError as error:
+        print(f"Error returned: <<<{error}>>>")
     
     return {"number_of_potions": total_potions, "ml_in_barrels": total_ml, "gold": gold}
 

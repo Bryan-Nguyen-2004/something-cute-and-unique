@@ -39,4 +39,6 @@ create table
     constraint cart_items_pkey primary key (id),
     constraint cart_items_cart_id_fkey foreign key (cart_id) references carts (id) on update cascade on delete cascade,
     constraint cart_items_catalog_id_fkey foreign key (catalog_id) references catalog (id) on update cascade on delete cascade
+    constraint cart_items_quantity_check check ((quantity > 0))
   ) tablespace pg_default;
+

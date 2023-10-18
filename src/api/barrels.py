@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from src.api import auth
 import sqlalchemy
 from src import database as db
+from sqlalchemy.exc import DBAPIError
 
 router = APIRouter(
     prefix="/barrels",
@@ -24,30 +25,36 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
     """ """
     print("barrels_delivered:",barrels_delivered)
     
-    global_vals = { "gold":0, (1,0,0,0):0, (0,1,0,0):0, (0,0,1,0):0, (0,0,0,1):0 }
-    
-    # update global_vals for each barrel delivered
-    for barrel in barrels_delivered:
-        potion_type = tuple(barrel.potion_type)
-        if potion_type not in global_vals: raise Exception(f"Invalid potion type: {potion_type}")
+    types = {(1,0,0,0):"red_ml", (0,1,0,0):"green_ml", (0,0,1,0):"blue_ml", (0,0,0,1):"dark_ml"}
 
-        global_vals[potion_type] += (barrel.ml_per_barrel * barrel.quantity)
-        global_vals["gold"] += (barrel.price * barrel.quantity)
+    try:
+        with db.engine.begin() as connection:
+            # for each barrel delivered
+            for barrel in barrels_delivered:
+                # calculate changes
+                ml_type = types[tuple(barrel.potion_type)]
+                ml_change = barrel.ml_per_barrel * barrel.quantity
+                gold_change = -(barrel.price * barrel.quantity)
+                
+                # insert transaction w/ description
+                result = connection.execute(
+                    sqlalchemy.text(
+                        "INSERT INTO transactions (description) VALUES (:description) RETURNING id"
+                    ), [{"description": f"Received {barrel.quantity} {barrel.sku}, each costing {barrel.price} gold for {barrel.ml_per_barrel} {ml_type}"}])
+                transaction_id = result.scalar_one()
 
-    with db.engine.begin() as connection:
-        # update global inventory
-        connection.execute(
-            sqlalchemy.text(
-                """
-                UPDATE global_inventory 
-                SET gold = gold - :gold, 
-                num_red_ml = num_red_ml + :num_red_ml,
-                num_green_ml = num_green_ml + :num_green_ml, 
-                num_blue_ml = num_blue_ml + :num_blue_ml, 
-                num_dark_ml = num_dark_ml + :num_dark_ml
-                """
-            ), [{"gold": global_vals["gold"], "num_red_ml": global_vals[(1,0,0,0)], "num_green_ml": global_vals[(0,1,0,0)], "num_blue_ml": global_vals[(0,0,1,0)], "num_dark_ml": global_vals[(0,0,0,1)]}])
-
+                # insert gold and ml change into global ledger
+                connection.execute(
+                    sqlalchemy.text(
+                        """
+                        INSERT INTO ledger_global (transaction_id, type, change)
+                        VALUES (:transaction_id, :type, :change)
+                        """
+                    ), [{"transaction_id": transaction_id, "type": ml_type, "change": ml_change},
+                        {"transaction_id": transaction_id, "type": "gold", "change": gold_change}])
+    except DBAPIError as error:
+        print(f"Error returned: <<<{error}>>>")
+        
     return "OK"
 
 # Gets called once a day
@@ -64,43 +71,55 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
     # Barrel(sku='MINI_BLUE_BARREL', ml_per_barrel=200, potion_type=[0, 0, 1, 0], price=60, quantity=1)]
     
 
-    # I'm only buying the small barrels
-    types = {"SMALL_RED_BARREL":"num_red_", "SMALL_GREEN_BARREL":"num_green_", "SMALL_BLUE_BARREL":"num_blue_"}
+    # I'm only buying the small barrels (will likely point to actual barrels in later implementations)
+    small_skus = {"SMALL_RED_BARREL": None, "SMALL_GREEN_BARREL": None, "SMALL_BLUE_BARREL": None}
+    mini_skus = {"MINI_RED_BARREL": None, "MINI_GREEN_BARREL": None, "MINI_BLUE_BARREL": None}
+    totals = {}
     ans = []
+    
+    try:
+        with db.engine.begin() as connection:        
+            # query globals
+            result = connection.execute(
+                sqlalchemy.text(
+                    "SELECT type, SUM(change) AS total FROM ledger_global GROUP BY type ORDER BY type"))
+            
+            # destructure globals
+            for type, total in result:
+                totals[type] = total
+            num_blue_ml, num_dark_ml, gold, num_green_ml, num_red_ml = totals.values()
 
-    with db.engine.begin() as connection:
-        # query globals
-        result = connection.execute(
-            sqlalchemy.text(
-                "SELECT gold, num_red_ml, num_blue_ml, num_green_ml FROM global_inventory"))
-        gold, num_red_ml, num_blue_ml, num_green_ml = result.first()
+            # gold is split to buy equal amounts of each barrel
+            split_gold = gold // 3
 
-        # gold is split to buy equal amount of each barrel
-        split_gold = gold // 3
+            print(gold, num_red_ml, num_blue_ml, num_green_ml, num_dark_ml, split_gold)
 
-        print(gold, num_red_ml, num_blue_ml, num_green_ml, split_gold)
+            # find corresponding small barrels in catalog
+            for barrel in wholesale_catalog:
+                sku, ml_per_barrel, potion_type, price, quantity = barrel.sku, barrel.ml_per_barrel, barrel.potion_type, barrel.price, barrel.quantity
+                red_ml, green_ml, blue_ml, dark_ml = barrel.potion_type
+                print(sku, ml_per_barrel, potion_type, price, quantity)
 
-        # find corresponding small barrels in catalog
-        for barrel in wholesale_catalog:
-            sku, ml_per_barrel, potion_type, price, quantity = barrel.sku, barrel.ml_per_barrel, barrel.potion_type, barrel.price, barrel.quantity
-            red_ml, green_ml, blue_ml, dark_ml = barrel.potion_type
-            print(sku, ml_per_barrel, potion_type, price, quantity)
+                if sku in small_skus: 
+                    # calculate amount of barrels to buy
+                    amount = min(split_gold // price, quantity)
 
-            if sku in types: 
-                # calculate amount of barrels to buy
-                amount = min(split_gold // price, quantity)
+                    if amount == 0:
+                        if gold >= price:
+                            amount+=1
+                            ans.append({ "sku": sku, "quantity": amount })
+                        break
 
-                if amount == 0:
-                    if gold >= price:
-                        amount+=1
-                        ans.append({ "sku": sku, "quantity": amount })
-                    break
+                    gold -= price * amount
 
-                gold -= price * amount
+                    if gold < 0: break
 
-                if gold < 0: break
+                    # add barrel to purchase plan
+                    ans.append({ "sku": sku, "quantity": amount })
+    except DBAPIError as error:
+        print(f"Error returned: <<<{error}>>>")
 
-                # add barrel to purchase plan
-                ans.append({ "sku": sku, "quantity": amount })
+    print(totals)
+    print("plan: ", ans)
 
     return ans

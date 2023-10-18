@@ -14,12 +14,17 @@ def get_catalog():
 
     try: 
         with db.engine.begin() as connection:
-            # query catalog for items in stock
+            # query catalog and ledger_catalog for items in stock
             result = connection.execute(
                 sqlalchemy.text(
                     """
-                    SELECT sku, name, stock AS quantity, price, ARRAY[red_ml, green_ml, blue_ml, dark_ml] AS potion_type
-                    FROM catalog
+                    SELECT c.sku, c.name, l_c.stock, c.price, ARRAY[c.red_ml, c.green_ml, c.blue_ml, c.dark_ml] AS potion_type
+                    FROM catalog AS c
+                    JOIN (
+                        SELECT catalog_id, SUM(change) AS stock
+                        FROM ledger_catalog
+                        GROUP BY catalog_id
+                    ) AS l_c ON catalog.id = l_c.catalog_id
                     WHERE stock > 0
                     ORDER BY stock DESC
                     LIMIT 6
