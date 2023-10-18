@@ -80,52 +80,8 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
     """ """
     total_gold = 0
     total_potions = 0
-    try:
-        with db.engine.begin() as connection:
-            # NOTE: joins cart_items and catalog based on catalog_id
-            #       and only includes the rows where cart_id = :cart_id
-            result = connection.execute(
-                sqlalchemy.text(
-                    """
-                    SELECT cart_items.quantity, catalog.stock, catalog.price
-                    FROM cart_items
-                    JOIN catalog ON cart_items.catalog_id = catalog.id
-                    WHERE cart_items.cart_id = :cart_id
-                    """
-                ), [{"cart_id": cart_id}])
-
-            # iterate each item in cart
-            for quantity, stock, price in result:
-                # check if enough stock
-                if stock < quantity:
-                    return {"total_potions_bought": 0, "total_gold_paid": 0}
-                
-                # update totals
-                total_gold += price * quantity
-                total_potions += quantity
-
-            # NOTE: cross joins cart_items and catalog and filters with conditions
-            # join condition - catalog.id = cart_items.catalog_id
-            # filter condition - cart_items.cart_id = :cart_id
-            connection.execute(
-                sqlalchemy.text(
-                    """
-                    UPDATE catalog
-                    SET stock = catalog.stock - cart_items.quantity, sold = sold + cart_items.quantity
-                    FROM cart_items
-                    WHERE catalog.id = cart_items.catalog_id AND cart_items.cart_id = :cart_id
-                    """
-                ), [{"cart_id": cart_id}])
-
-            # updates gold in global_inventory
-            connection.execute(
-                sqlalchemy.text(
-                    """
-                    UPDATE global_inventory
-                    SET gold = gold + :total_gold
-                    """
-                    ), [{"total_gold": total_gold}])
-            
+    
+    try:    
         with db.engine.begin() as connection:
             # NOTE: joins cart_items, cart, and catalog based on catalog_id
             #       and only includes the rows where cart_id = :cart_id

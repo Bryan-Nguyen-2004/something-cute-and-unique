@@ -24,7 +24,7 @@ def get_catalog():
                         SELECT catalog_id, SUM(change) AS stock
                         FROM ledger_catalog
                         GROUP BY catalog_id
-                    ) AS l_c ON catalog.id = l_c.catalog_id
+                    ) AS l_c ON c.id = l_c.catalog_id
                     WHERE stock > 0
                     ORDER BY stock DESC
                     LIMIT 6

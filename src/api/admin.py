@@ -23,7 +23,7 @@ def reset():
             connection.execute(sqlalchemy.text("TRUNCATE transactions CASCADE"))
             connection.execute(sqlalchemy.text("TRUNCATE carts CASCADE"))
             
-            # inserts initial values for globals (so they can be queried with WHERE type = 'type')
+            # inserts initial values for ledgers (so that they can be queried and not return null)
             result = connection.execute(
                 sqlalchemy.text(
                     """
@@ -33,7 +33,7 @@ def reset():
                     """
                 ))
             transaction_id = result.scalar_one()
-            
+
             connection.execute(
                 sqlalchemy.text(
                     """
@@ -43,8 +43,17 @@ def reset():
                 ), [{"transaction_id": transaction_id, "type": "gold", "change": 100},
                     {"transaction_id": transaction_id, "type": "red_ml", "change": 0},
                     {"transaction_id": transaction_id, "type": "green_ml", "change": 0},
-                    {"transaction_id": transaction_id, "type": "blue_ml", "change": 0}])
-
+                    {"transaction_id": transaction_id, "type": "blue_ml", "change": 0},
+                    {"transaction_id": transaction_id, "type": "dark_ml", "change": 0}])
+            
+            connection.execute(
+                sqlalchemy.text(
+                    """
+                    INSERT INTO ledger_catalog (transaction_id, catalog_id, change)
+                    VALUES (:transaction_id, 1, 0)
+                    """
+                ), [{"transaction_id": transaction_id}])
+            
     except DBAPIError as error:
         print(f"Error returned: <<<{error}>>>")
 

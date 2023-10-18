@@ -102,8 +102,8 @@ def get_bottle_plan():
                     """
                     SELECT type, SUM(change) AS total 
                     FROM ledger_global 
-                    GROUP BY type 
                     WHERE type != 'gold' 
+                    GROUP BY type 
                     ORDER BY type
                     """
                 ))

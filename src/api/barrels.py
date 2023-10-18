@@ -90,7 +90,8 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
             num_blue_ml, num_dark_ml, gold, num_green_ml, num_red_ml = totals.values()
 
             # gold is split to buy equal amounts of each barrel
-            split_gold = gold // 3
+            i = 3
+            split_gold = gold // i
 
             print(gold, num_red_ml, num_blue_ml, num_green_ml, num_dark_ml, split_gold)
 
@@ -109,8 +110,11 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
                             amount+=1
                             ans.append({ "sku": sku, "quantity": amount })
                         break
-
+                    
+                    # update gold
                     gold -= price * amount
+                    i-=1
+                    split_gold = gold // i
 
                     if gold < 0: break
 
