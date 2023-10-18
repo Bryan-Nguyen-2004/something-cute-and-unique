@@ -77,7 +77,7 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory]):
                     sqlalchemy.text(
                         """
                         INSERT INTO ledger_catalog (transaction_id, catalog_id, change)
-                        VALUES (:transaction_id, :type, :change)
+                        VALUES (:transaction_id, :catalog_id, :change)
                         """
                     ), [{"transaction_id": transaction_id, "catalog_id": catalog_id, "change": quantity}])
     except DBAPIError as error:
