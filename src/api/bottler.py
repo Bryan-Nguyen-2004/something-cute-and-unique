@@ -50,7 +50,7 @@ def post_deliver_bottles(potions_delivered: list[PotionInventory]):
                 result = connection.execute(
                     sqlalchemy.text(
                         "INSERT INTO transactions (description) VALUES (:description) RETURNING id"
-                    ), [{"description": f"Received {quantity} {sku} of type {potion_type}"}])
+                    ), [{"description": f"Bottled {quantity} {sku} of type {potion_type}"}])
                 transaction_id = result.scalar_one()
 
                 # insert potion stock changes into catalog ledger

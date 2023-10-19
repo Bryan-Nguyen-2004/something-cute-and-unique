@@ -40,7 +40,7 @@ def post_deliver_barrels(barrels_delivered: list[Barrel]):
                 result = connection.execute(
                     sqlalchemy.text(
                         "INSERT INTO transactions (description) VALUES (:description) RETURNING id"
-                    ), [{"description": f"Received {barrel.quantity} {barrel.sku}, each costing {barrel.price} gold for {barrel.ml_per_barrel} {ml_type}"}])
+                    ), [{"description": f"Purchased {barrel.quantity} {barrel.sku}, each costing {barrel.price} gold for {barrel.ml_per_barrel} {ml_type}"}])
                 transaction_id = result.scalar_one()
 
                 # insert gold and ml change into global ledger
