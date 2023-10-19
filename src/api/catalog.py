@@ -25,7 +25,8 @@ def get_catalog():
                         FROM ledger_catalog
                         GROUP BY catalog_id
                     ) AS l_c ON c.id = l_c.catalog_id
-                    ORDER BY stock DESC
+                    WHERE l_c.stock > 0
+                    ORDER BY l_c.stock DESC
                     LIMIT 6
                     """
                 ))
