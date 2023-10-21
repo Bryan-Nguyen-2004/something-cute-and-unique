@@ -67,7 +67,7 @@ def search_orders(
         previous = ""
     else:
         offset = int(search_page)
-        if offset - 5 <= 0: previous = ""
+        if offset - 5 < 0: previous = ""
         else: previous = str(offset - 5)
     next = 0
 
