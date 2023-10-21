@@ -117,7 +117,7 @@ def search_orders(
         results = []
         i = offset + 1
 
-        for id,created_at,name,customer_name,change,price in result:
+        for id,created_at,name,customer_name,change,price,total in result:
             change = abs(change)
 
             if change > 1:
@@ -129,7 +129,7 @@ def search_orders(
                     "line_item_id": i,
                     "item_sku": name,
                     "customer_name": customer_name,
-                    "line_item_total": change * price, 
+                    "line_item_total": total, 
                     "timestamp": created_at,
                 }
             )
