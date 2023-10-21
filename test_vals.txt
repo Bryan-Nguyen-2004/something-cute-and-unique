@@ -99,3 +99,17 @@ for barrel in wholesale_catalog:
     print(totals)
     print("plan: ", ans)
     print(gold)
+
+
+
+
+
+
+
+SELECT * FROM catalog
+JOIN (
+  SELECT catalog_id, SUM(change) as stock FROM ledger_catalog GROUP BY catalog_id
+) AS ledger_catalog
+ON ledger_catalog.catalog_id = catalog.id
+WHERE stock > 0
+ORDER BY stock DESC

@@ -55,16 +55,23 @@ def search_orders(
     time is 5 total line items.
     """
 
+    metadata = sqlalchemy.MetaData()
+    carts = sqlalchemy.Table("carts", metadata, autoload_with=db.engine)
+    catalog = sqlalchemy.Table("catalog", metadata, autoload_with=db.engine)
+    transactions = sqlalchemy.Table("transactions", metadata, autoload_with=db.engine)
+    ledger_global = sqlalchemy.Table("ledger_global", metadata, autoload_with=db.engine)
+    ledger_catalog = sqlalchemy.Table("ledger_catalog", metadata, autoload_with=db.engine)
+
     offset = 0
 
     if sort_col is search_sort_options.customer_name:
-        order_by = db.carts.c.customer_name
+        order_by = carts.c.customer_name
     elif sort_col is search_sort_options.item_sku:
-        order_by = db.catalog.c.sku
+        order_by = catalog.c.sku
     elif sort_col is search_sort_options.line_item_total:
-        order_by = db.ledger_global.c.change
+        order_by = ledger_global.c.change
     elif sort_col is search_sort_options.timestamp:
-        order_by = db.transactions.c.created_at
+        order_by = transactions.c.created_at
     else:
         assert False
 
@@ -77,26 +84,26 @@ def search_orders(
 
     stmt = (
         sqlalchemy.select(
-            db.transactions.c.id,
-            db.transactions.c.created_at,
-            db.catalog.c.sku,
-            db.carts.c.customer_name,
-            db.ledger_global.c.change,
-            db.catalog.c.price,
+            transactions.c.id,
+            transactions.c.created_at,
+            catalog.c.sku,
+            carts.c.customer_name,
+            ledger_global.c.change,
+            catalog.c.price,
         )
-        .join(db.ledger_catalog, db.ledger_catalog.c.transaction_id == db.transactions.c.id)
-        .join(db.catalog, db.catalog.c.id == db.ledger_catalog.c.catalog_id)
-        .join(db.carts, db.carts.c.id == db.transactions.c.cart_id)
+        .join(ledger_catalog, ledger_catalog.c.transaction_id == transactions.c.id)
+        .join(catalog, catalog.c.id == ledger_catalog.c.catalog_id)
+        .join(carts, carts.c.id == transactions.c.cart_id)
         .limit(5)
         .offset(offset)
-        .order_by(order_by, db.transactions.c.id)
+        .order_by(order_by, transactions.c.id)
     )
 
     if customer_name != "":
-        stmt = stmt.where(db.carts.c.customer_name.ilike(f"%{customer_name}%"))
+        stmt = stmt.where(carts.c.customer_name.ilike(f"%{customer_name}%"))
 
     if potion_sku != "":
-        stmt = stmt.where(db.catalog.c.sku.ilike(f"%{potion_sku}%"))
+        stmt = stmt.where(catalog.c.sku.ilike(f"%{potion_sku}%"))
 
     with db.engine.connect() as connection:
         result = connection.execute(stmt)
