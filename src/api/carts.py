@@ -64,7 +64,7 @@ def search_orders(
     elif sort_col is search_sort_options.line_item_total:
         order_by = db.ledger_global.c.change
     elif sort_col is search_sort_options.timestamp:
-        order_by = db.transactions.c.timestamp
+        order_by = db.transactions.c.created_at
     else:
         assert False
 
