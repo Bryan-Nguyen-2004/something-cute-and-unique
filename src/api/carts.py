@@ -67,7 +67,8 @@ def search_orders(
         previous = ""
     else:
         offset = int(search_page)
-        previous = str(offset - 5)
+        if offset - 5 <= 0: previous = ""
+        else: previous = str(offset - 5)
     next = 0
 
     if sort_col is search_sort_options.customer_name:
@@ -117,7 +118,7 @@ def search_orders(
 
         for id,created_at,name,customer_name,change,price in result:
             change = abs(change)
-            
+
             if change > 1:
                 name += "s"
             name = str(change) + " " + name
@@ -133,7 +134,7 @@ def search_orders(
             )
             i += 1
 
-            if len(results) <= 5:
+            if len(results) >= 5:
                 next = str(offset + 5)
                 break
             
