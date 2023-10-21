@@ -54,6 +54,7 @@ def search_orders(
     Your results must be paginated, the max results you can return at any
     time is 5 total line items.
     """
+    print("search_page:", search_page)
 
     metadata = sqlalchemy.MetaData()
     carts = sqlalchemy.Table("carts", metadata, autoload_with=db.engine)
@@ -88,7 +89,7 @@ def search_orders(
             transactions.c.created_at,
             catalog.c.sku,
             carts.c.customer_name,
-            ledger_global.c.change,
+            ledger_catalog.c.change,
             catalog.c.price,
         )
         .join(ledger_catalog, ledger_catalog.c.transaction_id == transactions.c.id)
