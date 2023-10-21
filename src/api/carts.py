@@ -62,7 +62,13 @@ def search_orders(
     transactions = sqlalchemy.Table("transactions", metadata, autoload_with=db.engine)
     ledger_catalog = sqlalchemy.Table("ledger_catalog", metadata, autoload_with=db.engine)
 
-    offset = 0
+    if search_page == "":
+        offset = 0
+        previous = ""
+    else:
+        offset = int(search_page)
+        previous = str(offset - 5)
+    next = 0
 
     if sort_col is search_sort_options.customer_name:
         order_by = carts.c.customer_name
@@ -94,7 +100,6 @@ def search_orders(
         .join(ledger_catalog, ledger_catalog.c.transaction_id == transactions.c.id)
         .join(catalog, catalog.c.id == ledger_catalog.c.catalog_id)
         .join(carts, carts.c.id == transactions.c.cart_id)
-        .limit(5)
         .offset(offset)
         .order_by(order_by, transactions.c.id)
     )
@@ -111,6 +116,8 @@ def search_orders(
         i = offset + 1
 
         for id,created_at,name,customer_name,change,price in result:
+            change = abs(change)
+            
             if change > 1:
                 name += "s"
             name = str(change) + " " + name
@@ -125,10 +132,14 @@ def search_orders(
                 }
             )
             i += 1
+
+            if len(results) <= 5:
+                next = str(offset + 5)
+                break
             
     return {
-        "previous": "",
-        "next": "",
+        "previous": previous,
+        "next": next,
         "results": results,
     }
 
