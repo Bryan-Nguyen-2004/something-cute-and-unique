@@ -76,7 +76,7 @@ def search_orders(
     elif sort_col is search_sort_options.item_sku:
         order_by = catalog.c.name
     elif sort_col is search_sort_options.line_item_total:
-        order_by = ledger_catalog.c.change
+        order_by = 'total'
     elif sort_col is search_sort_options.timestamp:
         order_by = transactions.c.created_at
     else:
@@ -97,6 +97,7 @@ def search_orders(
             carts.c.customer_name,
             ledger_catalog.c.change,
             catalog.c.price,
+            (ledger_catalog.c.change * catalog.c.price).label('total'),
         )
         .join(ledger_catalog, ledger_catalog.c.transaction_id == transactions.c.id)
         .join(catalog, catalog.c.id == ledger_catalog.c.catalog_id)
