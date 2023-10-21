@@ -60,7 +60,6 @@ def search_orders(
     carts = sqlalchemy.Table("carts", metadata, autoload_with=db.engine)
     catalog = sqlalchemy.Table("catalog", metadata, autoload_with=db.engine)
     transactions = sqlalchemy.Table("transactions", metadata, autoload_with=db.engine)
-    ledger_global = sqlalchemy.Table("ledger_global", metadata, autoload_with=db.engine)
     ledger_catalog = sqlalchemy.Table("ledger_catalog", metadata, autoload_with=db.engine)
 
     offset = 0
@@ -68,9 +67,9 @@ def search_orders(
     if sort_col is search_sort_options.customer_name:
         order_by = carts.c.customer_name
     elif sort_col is search_sort_options.item_sku:
-        order_by = catalog.c.sku
+        order_by = catalog.c.name
     elif sort_col is search_sort_options.line_item_total:
-        order_by = ledger_global.c.change
+        order_by = ledger_catalog.c.change
     elif sort_col is search_sort_options.timestamp:
         order_by = transactions.c.created_at
     else:
@@ -87,7 +86,7 @@ def search_orders(
         sqlalchemy.select(
             transactions.c.id,
             transactions.c.created_at,
-            catalog.c.sku,
+            catalog.c.name,
             carts.c.customer_name,
             ledger_catalog.c.change,
             catalog.c.price,
@@ -104,20 +103,24 @@ def search_orders(
         stmt = stmt.where(carts.c.customer_name.ilike(f"%{customer_name}%"))
 
     if potion_sku != "":
-        stmt = stmt.where(catalog.c.sku.ilike(f"%{potion_sku}%"))
+        stmt = stmt.where(catalog.c.name.ilike(f"%{potion_sku}%"))
 
     with db.engine.connect() as connection:
         result = connection.execute(stmt)
         results = []
         i = offset + 1
 
-        for id,created_at,sku,customer_name,change,price in result:
+        for id,created_at,name,customer_name,change,price in result:
+            if change > 1:
+                name += "s"
+            name = str(change) + " " + name
+
             results.append(
                 {
                     "line_item_id": i,
-                    "item_sku": str(abs(change)) + " " + sku,
+                    "item_sku": name,
                     "customer_name": customer_name,
-                    "line_item_total": abs(change) * price, 
+                    "line_item_total": change * price, 
                     "timestamp": created_at,
                 }
             )
