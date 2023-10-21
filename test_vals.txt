@@ -39,3 +39,63 @@ just a place for me to store test vals :)
     "quantity": 10
   }
 ]
+
+
+
+
+
+
+
+class Barrel():
+    def __init__(self, sku, ml_per_barrel, potion_type, price, quantity):
+        self.sku = sku
+    
+        self.ml_per_barrel = ml_per_barrel
+        self.potion_type = potion_type
+        self.price = price
+    
+        self.quantity = quantity
+    
+gold = 430
+small_skus = {"SMALL_RED_BARREL": None, "SMALL_GREEN_BARREL": None, "SMALL_BLUE_BARREL": None}
+ans = []
+totals = {}
+
+wholesale_catalog = [Barrel(sku='SMALL_RED_BARREL', ml_per_barrel=500, potion_type=[1, 0, 0, 0], price=100, quantity=10), Barrel(sku='SMALL_GREEN_BARREL', ml_per_barrel=500, potion_type=[0, 1, 0, 0], price=100, quantity=10), Barrel(sku='SMALL_BLUE_BARREL', ml_per_barrel=500, potion_type=[0, 0, 1, 0], price=120, quantity=10), Barrel(sku='MINI_RED_BARREL', ml_per_barrel=200, potion_type=[1, 0, 0, 0], price=60, quantity=1), Barrel(sku='MINI_GREEN_BARREL', ml_per_barrel=200, potion_type=[0, 1, 0, 0], price=60, quantity=1), Barrel(sku='MINI_BLUE_BARREL', ml_per_barrel=200, potion_type=[0, 0, 1, 0], price=60, quantity=1)]
+
+# gold is split to buy equal amounts of each barrel
+i = 3
+split_gold = gold // i
+
+print(gold, split_gold)
+
+# find corresponding small barrels in catalog
+for barrel in wholesale_catalog:
+    sku, ml_per_barrel, potion_type, price, quantity = barrel.sku, barrel.ml_per_barrel, barrel.potion_type, barrel.price, barrel.quantity
+    red_ml, green_ml, blue_ml, dark_ml = barrel.potion_type
+    print(sku, ml_per_barrel, potion_type, price, quantity)
+
+    if sku in small_skus: 
+        # calculate amount of barrels to buy
+        print(split_gold, price, quantity)
+        amount = min(split_gold // price, quantity)
+
+        if amount == 0:
+            if gold >= price:
+                amount+=1
+                ans.append({ "sku": sku, "quantity": amount })
+            break
+        
+        # update gold
+        gold -= price * amount
+        i -= 1
+        if i > 0: split_gold = gold // i
+
+        if gold < 0: break
+
+        # add barrel to purchase plan
+        ans.append({ "sku": sku, "quantity": amount })
+
+    print(totals)
+    print("plan: ", ans)
+    print(gold)

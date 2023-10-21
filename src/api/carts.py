@@ -4,12 +4,122 @@ from src.api import auth
 import sqlalchemy
 from src import database as db
 from sqlalchemy.exc import DBAPIError
+from enum import Enum
 
 router = APIRouter(
     prefix="/carts",
     tags=["cart"],
     dependencies=[Depends(auth.get_api_key)],
 )
+
+class search_sort_options(str, Enum):
+    customer_name = "customer_name"
+    item_sku = "item_sku"
+    line_item_total = "line_item_total"
+    timestamp = "timestamp"
+
+class search_sort_order(str, Enum):
+    asc = "asc"
+    desc = "desc"   
+
+@router.get("/search/", tags=["search"])
+def search_orders(
+    customer_name: str = "",
+    potion_sku: str = "",
+    search_page: str = "",
+    sort_col: search_sort_options = search_sort_options.timestamp,
+    sort_order: search_sort_order = search_sort_order.desc,
+):
+    """
+    Search for cart line items by customer name and/or potion sku.
+
+    Customer name and potion sku filter to orders that contain the 
+    string (case insensitive). If the filters aren't provided, no
+    filtering occurs on the respective search term.
+
+    Search page is a cursor for pagination. The response to this
+    search endpoint will return previous or next if there is a
+    previous or next page of results available. The token passed
+    in that search response can be passed in the next search request
+    as search page to get that page of results.
+
+    Sort col is which column to sort by and sort order is the direction
+    of the search. They default to searching by timestamp of the order
+    in descending order.
+
+    The response itself contains a previous and next page token (if
+    such pages exist) and the results as an array of line items. Each
+    line item contains the line item id (must be unique), item sku, 
+    customer name, line item total (in gold), and timestamp of the order.
+    Your results must be paginated, the max results you can return at any
+    time is 5 total line items.
+    """
+
+    offset = 0
+
+    if sort_col is search_sort_options.customer_name:
+        order_by = db.carts.c.customer_name
+    elif sort_col is search_sort_options.item_sku:
+        order_by = db.catalog.c.sku
+    elif sort_col is search_sort_options.line_item_total:
+        order_by = db.ledger_global.c.change
+    elif sort_col is search_sort_options.timestamp:
+        order_by = db.transactions.c.timestamp
+    else:
+        assert False
+
+    if sort_order is search_sort_order.asc:
+        order_by = sqlalchemy.desc(order_by)
+    elif sort_order is search_sort_order.desc:
+        order_by = sqlalchemy.asc(order_by)
+    else:
+        assert False
+
+    stmt = (
+        sqlalchemy.select(
+            db.transactions.c.id,
+            db.transactions.c.created_at,
+            db.catalog.c.sku,
+            db.carts.c.customer_name,
+            db.ledger_global.c.change,
+            db.catalog.c.price,
+        )
+        .join(db.ledger_catalog, db.ledger_catalog.c.transaction_id == db.transactions.c.id)
+        .join(db.catalog, db.catalog.c.id == db.ledger_catalog.c.catalog_id)
+        .join(db.carts, db.carts.c.id == db.transactions.c.cart_id)
+        .limit(5)
+        .offset(offset)
+        .order_by(order_by, db.transactions.c.id)
+    )
+
+    if customer_name != "":
+        stmt = stmt.where(db.carts.c.customer_name.ilike(f"%{customer_name}%"))
+
+    if potion_sku != "":
+        stmt = stmt.where(db.catalog.c.sku.ilike(f"%{potion_sku}%"))
+
+    with db.engine.connect() as connection:
+        result = connection.execute(stmt)
+        results = []
+        i = offset + 1
+
+        for id,created_at,sku,customer_name,change,price in result:
+            results.append(
+                {
+                    "line_item_id": i,
+                    "item_sku": str(abs(change)) + " " + sku,
+                    "customer_name": customer_name,
+                    "line_item_total": abs(change) * price, 
+                    "timestamp": created_at,
+                }
+            )
+            i += 1
+            
+    return {
+        "previous": "",
+        "next": "",
+        "results": results,
+    }
 
 
 class NewCart(BaseModel):

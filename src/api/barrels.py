@@ -103,6 +103,7 @@ def get_wholesale_purchase_plan(wholesale_catalog: list[Barrel]):
 
                 if sku in small_skus: 
                     # calculate amount of barrels to buy
+                    print(split_gold, price, quantity)
                     amount = min(split_gold // price, quantity)
 
                     if amount == 0:
