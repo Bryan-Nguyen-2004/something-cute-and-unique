@@ -229,15 +229,15 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
                     WHERE cart_items.cart_id = :cart_id
                     """
                 ), [{"cart_id": cart_id}])
-            
-            # check if cart is already checked out
-            if result.first().checked_out:
-                return {"total_potions_bought": 0, "total_gold_paid": 0}
 
             # iterate each item in cart
             for catalog_id, quantity, price, sku, customer_name, checked_out in result:
                 total_gold += price * quantity
                 total_potions += quantity
+
+                # check if cart is already checked out
+                if checked_out:
+                    return {"total_potions_bought": 0, "total_gold_paid": 0}
 
                 # insert transaction
                 result = connection.execute(
