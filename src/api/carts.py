@@ -97,7 +97,7 @@ def search_orders(
             carts.c.customer_name,
             ledger_catalog.c.change,
             catalog.c.price,
-            (ledger_catalog.c.change * catalog.c.price).label('total'),
+            (abs(ledger_catalog.c.change * catalog.c.price)) .label('total'),
         )
         .join(ledger_catalog, ledger_catalog.c.transaction_id == transactions.c.id)
         .join(catalog, catalog.c.id == ledger_catalog.c.catalog_id)
