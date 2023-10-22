@@ -97,7 +97,7 @@ def search_orders(
             carts.c.customer_name,
             ledger_catalog.c.change,
             catalog.c.price,
-            (abs(ledger_catalog.c.change * catalog.c.price)) .label('total'),
+            (ledger_catalog.c.change * catalog.c.price) .label('total'),
         )
         .join(ledger_catalog, ledger_catalog.c.transaction_id == transactions.c.id)
         .join(catalog, catalog.c.id == ledger_catalog.c.catalog_id)
@@ -129,7 +129,7 @@ def search_orders(
                     "line_item_id": i,
                     "item_sku": name,
                     "customer_name": customer_name,
-                    "line_item_total": total, 
+                    "line_item_total": abs(total), 
                     "timestamp": created_at,
                 }
             )
@@ -222,16 +222,20 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
             result = connection.execute(
                 sqlalchemy.text(
                     """
-                    SELECT catalog.id, cart_items.quantity, catalog.price, catalog.sku, carts.customer_name
+                    SELECT catalog.id, cart_items.quantity, catalog.price, catalog.sku, carts.customer_name, carts.checked_out
                     FROM cart_items
                     JOIN catalog ON cart_items.catalog_id = catalog.id
                     JOIN carts ON cart_items.cart_id = carts.id
                     WHERE cart_items.cart_id = :cart_id
                     """
                 ), [{"cart_id": cart_id}])
+            
+            # check if cart is already checked out
+            if result.first().checked_out:
+                return {"total_potions_bought": 0, "total_gold_paid": 0}
 
             # iterate each item in cart
-            for catalog_id, quantity, price, sku, customer_name in result:
+            for catalog_id, quantity, price, sku, customer_name, checked_out in result:
                 total_gold += price * quantity
                 total_potions += quantity
 
@@ -259,6 +263,17 @@ def checkout(cart_id: int, cart_checkout: CartCheckout):
                         VALUES (:transaction_id, :type, :change)
                         """
                     ), [{"transaction_id": transaction_id, "type": "gold", "change": price*quantity}])
+        
+            # update cart to checked out
+            connection.execute(
+                sqlalchemy.text(
+                    """
+                    UPDATE carts
+                    SET checked_out = true
+                    WHERE id = :cart_id
+                    """
+                ), [{"cart_id": cart_id}])
+            
     except DBAPIError as error:
         print(f"Error returned: <<<{error}>>>")
 
